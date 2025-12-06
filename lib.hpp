@@ -57,14 +57,16 @@ struct V3Hash {
     }
 };
 
-vector<string> split_s(const string &s, const string &delimiter) {
+vector<string> split_s(const string &s, const string &delimiter, bool collapse = false) {
     vector<string> res;
     size_t pos_start = 0;
     for (size_t pos_end, delim_len = delimiter.length();
             (pos_end = s.find(delimiter, pos_start)) != string::npos;
             pos_start = pos_end + delim_len)
-        res.push_back(s.substr(pos_start, pos_end - pos_start));
-    res.push_back(s.substr(pos_start));
+        if (pos_end != pos_start || !collapse)
+            res.push_back(s.substr(pos_start, pos_end - pos_start));
+    if (pos_start < s.size() || !collapse)
+        res.push_back(s.substr(pos_start));
     return res;
 }
 
@@ -74,8 +76,10 @@ vector<int> split_i(const string &s, const string &delimiter) {
     for (size_t pos_end, delim_len = delimiter.length();
             (pos_end = s.find(delimiter, pos_start)) != string::npos;
             pos_start = pos_end + delim_len)
-        res.push_back(stoi(s.substr(pos_start, pos_end - pos_start)));
-    res.push_back(stoi(s.substr(pos_start)));
+        if (pos_end != pos_start)
+            res.push_back(stoi(s.substr(pos_start, pos_end - pos_start)));
+    if (pos_start < s.size())
+        res.push_back(stoi(s.substr(pos_start)));
     return res;
 }
 
@@ -85,8 +89,10 @@ vector<long> split_l(const string &s, const string &delimiter) {
     for (size_t pos_end, delim_len = delimiter.length();
             (pos_end = s.find(delimiter, pos_start)) != string::npos;
             pos_start = pos_end + delim_len)
-        res.push_back(stol(s.substr(pos_start, pos_end - pos_start)));
-    res.push_back(stol(s.substr(pos_start)));
+        if (pos_end != pos_start)
+            res.push_back(stol(s.substr(pos_start, pos_end - pos_start)));
+    if (pos_start < s.size())
+        res.push_back(stol(s.substr(pos_start)));
     return res;
 }
 
@@ -96,8 +102,10 @@ vector<uint64_t> split_u64(const string &s, const string &delimiter) {
     for (size_t pos_end, delim_len = delimiter.length();
             (pos_end = s.find(delimiter, pos_start)) != string::npos;
             pos_start = pos_end + delim_len)
-        res.push_back(stoul(s.substr(pos_start, pos_end - pos_start)));
-    res.push_back(stoul(s.substr(pos_start)));
+        if (pos_end != pos_start)
+            res.push_back(stoul(s.substr(pos_start, pos_end - pos_start)));
+    if (pos_start < s.size())
+        res.push_back(stoul(s.substr(pos_start)));
     return res;
 }
 
