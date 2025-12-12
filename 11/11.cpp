@@ -15,6 +15,13 @@ long iterate(int end) {
     return res;
 }
 
+long run(int start, int end) {
+    paths[start] = 1;
+    long res = iterate(end);
+    paths.clear();
+    return res;
+}
+
 int main() {
     string s;
     smatch linematch;
@@ -26,32 +33,21 @@ int main() {
     }
 
     int you = remap("you"), out = remap("out");
-    paths[you] = 1;
-    long result = iterate(out);
+    long result = run(you, out);
     cout << result << endl;
 
     int svr = remap("svr"), fft = remap("fft"), dac = remap("dac");
-    paths.clear();
-    paths[svr] = 1;
     paths[dac] = 0;
     paths[fft] = 0;
-    long res00 = iterate(out);
+    long res00 = run(svr, out);
 
-    paths.clear();
-    paths[svr] = 1;
     paths[dac] = 0;
-    long res01 = iterate(out);
+    long res01 = run(svr, out);
 
-    paths.clear();
-    paths[svr] = 1;
     paths[fft] = 0;
-    long res10 = iterate(out);
+    long res10 = run(svr, out);
 
-    paths.clear();
-    paths[svr] = 1;
-    long res11 = iterate(out);
-
-    long result2 = res11 - res01 - res10 + res00;
+    long res11 = run(svr, out), result2 = res11 - res01 - res10 + res00;
     cout << result2 << endl;
 
     return 0;

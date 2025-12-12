@@ -10,12 +10,9 @@ int m, n;
 char get(int i, int j) { return (i < 0 || j < 0 || i >= m || j >= n) ? '.' : grid[i][j]; }
 
 int main() {
-    while (true) {
-        string s;
-        getline(cin, s);
-        if (!cin) break;
+    string s;
+    while (getline(cin, s))
         grid.push_back(s);
-    }
 
     m = grid.size();
     n = grid[0].size();
@@ -45,7 +42,6 @@ int main() {
                 q.emplace(ii, jj);
         }
     }
-
     cout << result << ' ' << result2 << endl;
 
     return 0;

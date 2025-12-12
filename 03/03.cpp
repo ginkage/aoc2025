@@ -13,17 +13,13 @@ long dp(const char *s, int n, int pos, int dig) {
 }
 
 int main() {
-    long result = 0, result2 = 0;
-
     pw[1] = 1;
     for (int i = 2; i < 13; i++)
         pw[i] = 10 * pw[i - 1];
 
-    while (true) {
-        string s;
-        getline(cin, s);
-        if (!cin) break;
-
+    string s;
+    long result = 0, result2 = 0;
+    while (getline(cin, s)) {
         for (int i = 0; i < 100; i++) {
             memo[i][0] = 0;
             for (int j = 1; j < 13; j++)
@@ -33,7 +29,6 @@ int main() {
         result += dp(s.c_str(), s.size(), 0, 2);
         result2 += dp(s.c_str(), s.size(), 0, 12);
     }
-
     cout << result << ' ' << result2 << endl;
 
     return 0;

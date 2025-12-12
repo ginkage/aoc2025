@@ -6,13 +6,13 @@ int solve(vector<vector<int>> &A, vector<int> &b, int m, int n) {
     // Compute variable upper bounds based on participation.
     vector<int> ub(n, 0);
     for (int j = 0; j < n; ++j) {
-        int ubj = numeric_limits<int>::max();
+        int ubj = 0;
         bool appears = false;
-        for (int i = 0; i < m; ++i) {
-            if (A[i][j]) { appears = true; ubj = min(ubj, b[i]); }
-        }
-        if (!appears) ubj = 0;
-        if (ubj < 0 || ubj == numeric_limits<int>::max()) ubj = 0;
+        for (int i = 0; i < m; ++i)
+            if (A[i][j]) {
+                ubj = appears ? min(ubj, b[i]) : b[i];
+                appears = true;
+            }
         ub[j] = ubj;
     }
 
@@ -24,9 +24,8 @@ int solve(vector<vector<int>> &A, vector<int> &b, int m, int n) {
 
     // Add rows (constraints)
     glp_add_rows(lp, m);
-    for (int i = 1; i <= m; ++i) {
+    for (int i = 1; i <= m; ++i)
         glp_set_row_bnds(lp, i, GLP_FX, b[i-1], b[i-1]); // equality constraint
-    }
 
     // Add columns (variables)
     glp_add_cols(lp, n);
