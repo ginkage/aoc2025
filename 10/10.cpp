@@ -1,79 +1,77 @@
 #include "../lib.hpp"
 
-#include <glpk.h>
+__uint128_t tmp[12];
 
-int solve(vector<vector<int>> &A, vector<int> &b, int m, int n) {
-    // Compute variable upper bounds based on participation.
-    vector<int> ub(n, 0);
-    for (int j = 0; j < n; ++j) {
-        int ubj = 0;
-        bool appears = false;
-        for (int i = 0; i < m; ++i)
-            if (A[i][j]) {
-                ubj = appears ? min(ubj, b[i]) : b[i];
-                appears = true;
+__uint128_t pack(int m) {
+    __uint128_t result = 0;
+    for (int i = 0; i < m; i++)
+        result += tmp[i] << (10 * i);
+    return result;
+}
+
+void unpack(__uint128_t k, int m) {
+    __uint128_t mask = (1 << 10) - 1;
+    for (int i = 0; i < m; i++)
+        tmp[i] = (k >> (10 * i)) & mask;
+}
+
+unordered_map<__uint128_t, long> memo;
+
+long iterate(vector<uint16_t> &button, __uint128_t state, int m, int n) {
+    if (state == 0)
+        return 0;
+
+    auto it = memo.find(state);
+    if (it != memo.end())
+        return it->second;
+
+    unpack(state, m);
+    uint16_t target = 0;
+    for (int i = 0; i < m; i++)
+        if (tmp[i] & 1)
+            target |= (1 << i);
+
+    long result = 1000000;
+    for (int t = 0; t < (1 << n); t++) {
+        uint16_t pat = 0;
+        for (int j = 0; j < n; j++)
+            if (t & (1 << j))
+                pat ^= button[j];
+
+        if (pat == target) { // Parity matches
+            int k = 0;
+            bool good = true;
+            unpack(state, m);
+            for (int j = 0; j < n && good; j++) 
+                if (t & (1 << j)) { // Go over pressed buttons
+                    for (int i = 0; i < m && good; i++)
+                        if (button[j] & (1 << i)) { // Go over jolts for this button
+                            if (tmp[i] == 0)
+                                good = false; // Overflow
+                            else
+                                tmp[i]--;
+                        }
+                    k++;
+                }
+
+            if (good) {
+                for (int i = 0; i < m; i++)
+                    tmp[i] /= 2;
+                result = min(result, k + 2 * iterate(button, pack(m), m, n));
             }
-        ub[j] = ubj;
+        }
     }
 
-    // Create problem
-    glp_term_out(GLP_OFF);
-    glp_prob *lp = glp_create_prob();
-    glp_set_prob_name(lp, "axeqb_min_sum");
-    glp_set_obj_dir(lp, GLP_MIN);
+    memo[state] = result;
+    return result;
+}
 
-    // Add rows (constraints)
-    glp_add_rows(lp, m);
-    for (int i = 1; i <= m; ++i)
-        glp_set_row_bnds(lp, i, GLP_FX, b[i-1], b[i-1]); // equality constraint
-
-    // Add columns (variables)
-    glp_add_cols(lp, n);
-    for (int j = 1; j <= n; ++j) {
-        if (ub[j-1] == 0) {
-            glp_set_col_bnds(lp, j, GLP_FX, 0, 0); // fixed
-            glp_set_col_kind(lp, j, GLP_CV); // continuous
-        }
-        else {
-            glp_set_col_bnds(lp, j, GLP_DB, 0, ub[j-1]); // 0 <= x_j <= ub_j
-            glp_set_col_kind(lp, j, GLP_IV); // integer
-        }
-        glp_set_obj_coef(lp, j, 1.0);             // objective: sum_j x_j
-    }
-
-    // Build matrix in GLPK's sparse format
-    // GLPK expects 1-based indexing
-    int nz = 0;
-    for (int i = 0; i < m; ++i)
-        for (int j = 0; j < n; ++j)
-            if (A[i][j]) nz++;
-
-    // GLPK arrays indexed from 1..nz
-    vector<int> ia(nz + 1), ja(nz + 1);
-    vector<double> ar(nz + 1);
-
-    int k = 1;
-    for (int i = 0; i < m; ++i)
-        for (int j = 0; j < n; ++j)
-            if (A[i][j]) {
-                ia[k] = i + 1;
-                ja[k] = j + 1;
-                ar[k] = 1.0;
-                k++;
-            }
-
-    glp_load_matrix(lp, nz, ia.data(), ja.data(), ar.data());
-
-    // Solve MIP
-    glp_iocp params;
-    glp_init_iocp(&params);
-    params.msg_lev = GLP_MSG_ON;
-    params.presolve = GLP_ON;
-
-    glp_intopt(lp, &params);
-    double obj = glp_mip_obj_val(lp);
-    glp_delete_prob(lp);
-    return obj;
+long solve(vector<uint16_t> &button, vector<int> &jolt, int m, int n) {
+    memo.clear();
+    for (int i = 0; i < m; i++)
+        tmp[i] = jolt[i];
+    long res = iterate(button, pack(m), m, n);
+    return res;
 }
 
 int main() {
@@ -93,15 +91,12 @@ int main() {
         auto jolt = split_i(linematch[3].str(), ",");
         int m = jolt.size(), n = but.size();
 
-        vector<vector<int>> A(m, vector<int>(n, 0));
         for (int j = 0; j < n; j++) {
             uint16_t tog = 0;
             if (regex_match(but[j], linematch, butrex) && linematch.size() == 2) {
                 auto v = split_i(linematch[1].str(), ",");
-                for (int i : v) {
+                for (int i : v)
                     tog |= 1 << i;
-                    A[i][j] = 1;
-                }
             }
             button.push_back(tog);
         }
@@ -110,9 +105,9 @@ int main() {
         for (int t = 0; t < (1 << n); t++) {
             int k = 0;
             uint16_t pat = 0;
-            for (int i = 0; i < n; i++)
-                if (t & (1 << i)) {
-                    pat ^= button[i];
+            for (int j = 0; j < n; j++)
+                if (t & (1 << j)) {
+                    pat ^= button[j];
                     k++;
                 }
 
@@ -121,7 +116,7 @@ int main() {
         }
         result += best;
 
-        result2 += solve(A, jolt, m, n);
+        result2 += solve(button, jolt, m, n);
     }
     cout << result << ' ' << result2 << endl;
 
